@@ -1,19 +1,35 @@
-import { NextFunction, Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
 
-export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
-  console.log(req.cookies.accessToken)
-  if (req.cookies.accessToken === undefined) {
-    res.status(401).send()
-    return
+export const verifyToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const accessToken = req.cookies.accessToken;
+
+  if (!accessToken) {
+    res.status(401).json({
+      message: "Authentication required",
+    });
+    return;
   }
 
-  jwt.verify(req.cookies.accessToken, process.env.JWT_SECRET || "", (error: jwt.VerifyErrors | null) => {
-    if (error) {
-      res.status(403).send()
-      return
-    }
+  const jwtSecret = process.env.JWT_SECRET;
 
-    next() // makes the request move on to the next step in the process, in this case move on to greetingSpecific
-  })
-}
+  if (!jwtSecret) {
+    res.status(500).json({
+      message: "JWT secret is not configured",
+    });
+    return;
+  }
+
+  try {
+    jwt.verify(accessToken, jwtSecret);
+    next();
+  } catch {
+    res.status(403).json({
+      message: "Invalid or expired token",
+    });
+  }
+};
